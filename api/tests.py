@@ -38,3 +38,8 @@ class BookAPITestCase(TestCase):
         )
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["title"], "Clean Code Updated")
+
+    def test_delete_book(self):
+        response = self.client.delete(f"/api/books/{self.book.id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Book.objects.filter(id=self.book.id).exists())
