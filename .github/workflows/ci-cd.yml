@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline with kind
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     env:
@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: |
@@ -29,33 +29,37 @@ jobs:
       - name: Run unit tests
         run: python manage.py test
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
+      - name: Install Docker CLI (needed for kind)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker.io
 
-      - name: Build and push Docker image
+      - name: Install kind
+        run: |
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Create kind cluster
+        run: |
+          kind create cluster --name book-catalog-cluster
+
+      - name: Build Docker image for kind cluster
         run: |
           docker build -t $IMAGE_NAME:${{ github.sha }} .
-          docker push $IMAGE_NAME:${{ github.sha }}
+          kind load docker-image $IMAGE_NAME:${{ github.sha }} --name book-catalog-cluster
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
-          version: 'latest'
-
-      - name: Set up Kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
+          version: "latest"
 
       - name: Install Helm
         uses: azure/setup-helm@v3
         with:
-          version: 'v3.13.0'
+          version: "v3.13.0"
 
-      - name: Deploy with Helm
+      - name: Deploy with Helm to kind cluster
         run: |
           helm upgrade --install book-catalog ./helm \
             --set image.repository=$IMAGE_NAME \
