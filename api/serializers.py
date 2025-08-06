@@ -18,7 +18,8 @@ class BookSerializer(serializers.ModelSerializer):
 
     # Object-level validation
     def validate(self, data):
-        if data["published_date"] > date.today():
+        published_date = data.get("published_date")
+        if published_date and published_date > date.today():
             raise serializers.ValidationError(
                 {"published_date": "Published date cannot be in the future."}
             )
