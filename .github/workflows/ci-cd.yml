@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline with kind
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  build-and-deploy:
+  build-test-deploy:
     runs-on: ubuntu-latest
 
     env:
@@ -29,26 +29,25 @@ jobs:
       - name: Run unit tests
         run: python manage.py test
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
-      - name: Build and push Docker image
+      - name: Install kind
         run: |
-          docker build -t $IMAGE_NAME:${{ github.sha }} .
-          docker push $IMAGE_NAME:${{ github.sha }}
+          curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.20.0/kind-linux-amd64
+          chmod +x ./kind
+          sudo mv ./kind /usr/local/bin/kind
+
+      - name: Create kind cluster
+        run: kind create cluster --name book-catalog-cluster
+
+      - name: Build Docker image
+        run: docker build -t $IMAGE_NAME:${{ github.sha }} .
+
+      - name: Load Docker image into kind
+        run: kind load docker-image $IMAGE_NAME:${{ github.sha }} --name book-catalog-cluster
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
         with:
           version: "latest"
-
-      - name: Set up Kubeconfig
-        run: |
-          mkdir -p ~/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 -d > ~/.kube/config
 
       - name: Install Helm
         uses: azure/setup-helm@v3
@@ -57,4 +56,6 @@ jobs:
 
       - name: Deploy with Helm
         run: |
-          helm upgrade --install book-catalog ./helm --set image.repository=$IMAGE_NAME --set image.tag=${{ github.sha }}
+          helm upgrade --install book-catalog ./helm \
+            --set image.repository=$IMAGE_NAME \
+            --set image.tag=${{ github.sha }}
