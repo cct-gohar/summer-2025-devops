@@ -1,29 +1,121 @@
-# cct-devops-diploma-2025-template
-Template to kickstart your DevOps Diploma 2025 Project
+# 📚 Book Catalog API
 
-# Starting the server
+## 🔍 Project Overview
+This project is a RESTful Book Catalog API developed as part of the DevOps Diploma Capstone Assignment. The application allows users to create, read, update, and delete books. The backend is built using Django REST Framework, containerized using Docker, and deployed on Kubernetes via Helm. CI/CD is handled through GitHub Actions.
 
-## Create a virtual environment
+---
 
-First you need to create and activate a [Python Virtual Environment](https://docs.python.org/3/library/venv.html)
+## 🔗 API Usage Examples
 
-```bash
-$ python -m venv ./.venv
-$ source ./.venv/bin/activate
+### Base URL:
+```
+http://localhost:8000/api/books/
 ```
 
-## Install the dependencies
+### Endpoints:
+| Method | URL | Description |
+|--------|-----|-------------|
+| GET | /api/books/ | List all books |
+| POST | /api/books/ | Create a new book |
+| GET | /api/books/{id}/ | Retrieve a specific book |
+| PUT | /api/books/{id}/ | Update a book |
+| PATCH | /api/books/{id}/ | Partially update a book |
+| DELETE | /api/books/{id}/ | Delete a book |
 
-There's a file in this project named `requirements.txt` this is a common file found in python project and it contains a list of all dependencies needed to run it
-
-```bash
-$ pip install -r requirements.txt
+### Example JSON for POST:
+```json
+{
+  "title": "Clean Code",
+  "author": "Robert C. Martin",
+  "isbn": "9780132350884",
+  "published_date": "2008-08-01"
+}
 ```
 
-## Run the Server
+---
 
-You should now be able to start the server
+## 🛠 Local Build and Run Instructions
 
+### 1. Clone the Repository:
 ```bash
-$ python manage.py runserver
+git clone https://github.com/yourusername/book-catalog-api.git
+cd book-catalog-api
 ```
+
+### 2. Set up Virtual Environment (Optional):
+```bash
+python -m venv venv
+venv\Scripts\activate  # Windows
+```
+
+### 3. Install Dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+### 4. Run the Server:
+```bash
+python manage.py migrate
+python manage.py runserver
+```
+
+---
+
+## 🐳 Docker Instructions
+
+### Build and Run Docker Locally:
+```bash
+docker-compose up --build
+```
+
+### Apply Migrations in Container:
+```bash
+docker-compose exec web python manage.py migrate
+```
+
+---
+
+## 🤖 CI/CD Pipeline (GitHub Actions)
+
+- The workflow is triggered on every push to `main`
+- It performs the following steps:
+  - Install Python and dependencies
+  - Run Django unit tests
+  - Log in to Docker Hub
+  - Build and push Docker image
+  - Configure kubectl and helm
+  - Deploy the image to Kubernetes using Helm
+
+### Secrets Used:
+- `DOCKER_USERNAME`
+- `DOCKER_PASSWORD`
+- `DOCKER_IMAGE_NAME`
+- `KUBE_CONFIG_DATA`
+
+---
+
+## ☸️ Kubernetes and Helm Setup Instructions
+
+### Helm Chart Structure:
+```
+helm/
+  Chart.yaml
+  values.yaml
+  templates/
+    deployment.yaml
+    service.yaml
+    ingress.yaml (optional)
+```
+
+### Manual Deployment (Local Docker Desktop Kubernetes):
+```bash
+helm upgrade --install book-catalog ./helm ^
+  --set image.repository=yourdockerhub/book-catalog ^
+  --set image.tag=latest
+```
+
+### Accessing Locally:
+```bash
+kubectl port-forward svc/book-catalog 8000:8000
+```
+Visit: http://localhost:8000/api/books/
